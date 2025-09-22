@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net blob:;" />
+  <title>3D Human Anatomy Explorer — Interactive Organ Models</title>
+  <style>
+    html,body{height:100%;margin:0;background:linear-gradient(135deg,#0a0f1a 0%,#1a1f2e 50%,#0f1419 100%);color:#fff;font-family:Inter,system-ui,Helvetica,Arial;overflow-x:hidden}
+    #container{width:100%;height:100vh;display:block;overflow:hidden;position:relative}
+    .ui{position:fixed;left:20px;top:20px;z-index:10;background:rgba(0,0,0,0.4);backdrop-filter:blur(15px);padding:20px;border-radius:15px;border:1px solid rgba(255,255,255,0.15);box-shadow:0 10px 40px rgba(0,0,0,0.4)}
+    .ui h3{margin:0 0 10px 0;color:#ff6b6b;font-size:18px;font-weight:600}
+    .ui p{margin:6px 0;font-size:13px;color:#ddd;line-height:1.4}
+    .controls{position:fixed;right:20px;top:20px;z-index:10;background:rgba(0,0,0,0.4);backdrop-filter:blur(15px);padding:20px;border-radius:15px;border:1px solid rgba(255,255,255,0.15);box-shadow:0 10px 40px rgba(0,0,0,0.4)}
+    .control-btn{background:rgba(255,107,107,0.15);border:1px solid #ff6b6b;color:#ff6b6b;padding:10px 15px;margin:6px;border-radius:8px;cursor:pointer;transition:all 0.3s;font-size:12px;font-weight:500}
+    .control-btn:hover{background:rgba(255,107,107,0.3);transform:translateY(-2px);box-shadow:0 5px 15px rgba(255,107,107,0.3)}
+    .control-btn:active{transform:translateY(0)}
+    a{color:#9bdcff}
+    .loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;background:rgba(0,0,0,0.9);padding:30px;border-radius:15px;text-align:center;border:1px solid rgba(255,107,107,0.3)}
+    .spinner{border:4px solid rgba(255,107,107,0.2);border-top:4px solid #ff6b6b;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 15px}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .progress{width:200px;height:4px;background:rgba(255,107,107,0.2);border-radius:2px;margin:15px auto;overflow:hidden}
+    .progress-bar{height:100%;background:linear-gradient(90deg,#ff6b6b,#ff8e8e);border-radius:2px;animation:progress 2s ease-in-out}
+    @keyframes progress{0%{width:0%}100%{width:100%}}
+    .status{color:#4ecdc4;font-size:14px;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div class="ui">
+    <h3 id="organ-title">❤️ Human Heart Anatomy</h3>
+    <p><strong>🖱️ Interactive Controls:</strong></p>
+    <p>• Drag to rotate • Scroll to zoom</p>
+    <p>• Double-click to reset view</p>
+    <p id="organ-description"><strong>💓 Realistic heartbeat animation</strong></p>
+    <p>🔬 <span id="organ-features"><strong>Heart chambers & vessels</strong></span></p>
+    <p>🩸 <strong>Blood circulation system</strong></p>
+    <p>💡 <strong>High-resolution 3D model</strong></p>
+    <p>🏷️ <strong>Anatomical labels</strong></p>
+    
+    <div style="margin-top: 15px;">
+      <label for="organ-select" style="color: #4ecdc4; font-size: 14px; display: block; margin-bottom: 8px;"><strong>🔬 Select Organ:</strong></label>
+      <select id="organ-select" style="background: rgba(255,107,107,0.15); border: 1px solid #ff6b6b; color: #ff6b6b; padding: 8px 12px; border-radius: 6px; font-size: 12px; width: 100%;">
+        <option value="heart">❤️ Heart</option>
+        <option value="lung">🫁 Lung</option>
+        <option value="liver">🫀 Liver</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button class="control-btn" onclick="toggleAnimation()">⏸️ Pause Animation</button>
+    <button class="control-btn" onclick="resetView()">🔄 Reset View</button>
+    <button class="control-btn" onclick="toggleWireframe()">🔲 Wireframe</button>
+    <button class="control-btn" onclick="toggleLabels()">🏷️ Show Labels</button>
+    <button class="control-btn" onclick="toggleAutoRotate()">🔄 Auto Rotate</button>
+  </div>
+  
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading 3D Organ Model...</p>
+    <div class="progress">
+      <div class="progress-bar"></div>
+    </div>
+    <div class="status">Initializing anatomy...</div>
+    <div id="progress-text" style="color: #4ecdc4; font-size: 12px; margin-top: 10px;">Building organ geometry...</div>
+  </div>
+
+  <!-- Use modern ES modules with import map -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    // Import Three.js modules
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    
+    // Add error handling for module loading
+    window.addEventListener('error', function(e) {
+      if (e.message.includes('Failed to resolve module specifier')) {
+        console.error('Module loading error:', e);
+        document.getElementById('loading').innerHTML = `
+          <div style="color: #ff6b6b; text-align: center;">
+            <h3>⚠️ Module Loading Error</h3>
+            <p>Failed to load Three.js modules</p>
+            <p>Make sure you're running from a local server</p>
+            <button onclick="location.reload()" style="background: #ff6b6b; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-top: 15px;">
+              🔄 Retry
+            </button>
+          </div>
+        `;
+      }
+    });
+
+    // Global variables
+    let scene, camera, renderer, controls, mc, hemi, dirLight, clock;
+    let isAnimating = true, isWireframe = false, showLabels = false, autoRotate = false;
+    let liverLabels = [];
+    let glowMesh;
+    const container = document.getElementById('container');
+
+    function updateLoadingStatus(message) {
+      const statusEl = document.querySelector('.status');
+      if (statusEl) statusEl.textContent = message;
+    }
+    
+    function updateProgressText(message) {
+      const progressEl = document.getElementById('progress-text');
+      if (progressEl) progressEl.textContent = message;
+    }
+
+    // Initialize immediately since we have ES modules
+    console.log('✅ Three.js modules loaded successfully');
+    console.log('THREE object:', THREE);
+    console.log('OrbitControls:', OrbitControls);
+    console.log('GLTFLoader:', GLTFLoader);
+    updateLoadingStatus('Creating 3D scene...');
+    initializeLiver();
+    
+    function initializeLiver() {
+      // THREE, OrbitControls, and GLTFLoader are already imported as ES modules
+
+      try {
+        console.log('Starting liver initialization...');
+        updateLoadingStatus('Setting up scene...');
+    init();
+        console.log('Scene initialized successfully');
+        updateLoadingStatus('Building liver anatomy...');
+    animate();
+        console.log('Animation started successfully');
+        updateLoadingStatus('✅ Ready!');
+        
+        // Hide loading screen
+        setTimeout(() => {
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) {
+            console.log('Hiding loading screen...');
+            loadingEl.style.opacity = '0';
+            loadingEl.style.transition = 'opacity 0.8s ease-out';
+            setTimeout(() => {
+              loadingEl.style.display = 'none';
+            }, 800);
+          }
+        }, 2000);
+      } catch (error) {
+        console.error('Error initializing 3D liver:', error);
+        console.error('Error stack:', error.stack);
+        document.getElementById('loading').innerHTML = `
+          <div style="color: #ff6b6b; text-align: center;">
+            <h3>⚠️ Initialization Error</h3>
+            <p>Failed to create 3D liver model</p>
+            <p>Error: ${error.message}</p>
+            <p>Check console for details</p>
+            <button onclick="location.reload()" style="background: #ff6b6b; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-top: 15px; font-size: 14px;">
+              🔄 Retry
+            </button>
+          </div>
+        `;
+      }
+
+    function init(){
+        console.log('Initializing Three.js scene...');
+        updateLoadingStatus('Creating scene...');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x06101a);
+        console.log('Scene created:', scene);
+
+        updateLoadingStatus('Setting up camera...');
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+      camera.position.set(0, 1.2, 3.2);
+        console.log('Camera position:', camera.position);
+        console.log('Camera looking at:', camera.getWorldDirection(new THREE.Vector3()));
+
+        updateLoadingStatus('Initializing renderer...');
+        console.log('Creating WebGL renderer...');
+        renderer = new THREE.WebGLRenderer({ 
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance"
+        });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.3;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+        console.log('Renderer created and added to container:', renderer);
+
+        updateLoadingStatus('Setting up controls...');
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+        controls.dampingFactor = 0.04;
+        controls.minDistance = 0.6;
+        controls.maxDistance = 15;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+        controls.autoRotate = false;
+        controls.autoRotateSpeed = 0.8;
+
+        updateLoadingStatus('Adding enhanced lighting...');
+        // Professional medical lighting setup
+        hemi = new THREE.HemisphereLight(0xfff8f0, 0x1a0808, 1.2);
+      scene.add(hemi);
+
+        // Main key light for anatomical detail
+        dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(5, 10, 8);
+      dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 8192;
+        dirLight.shadow.mapSize.height = 8192;
+        dirLight.shadow.camera.near = 0.1;
+        dirLight.shadow.camera.far = 50;
+        dirLight.shadow.camera.left = -10;
+        dirLight.shadow.camera.right = 10;
+        dirLight.shadow.camera.top = 10;
+        dirLight.shadow.camera.bottom = -10;
+      scene.add(dirLight);
+
+        // Rim lighting for depth
+        const rimLight = new THREE.DirectionalLight(0xffddcc, 0.8);
+        rimLight.position.set(-6, 3, -8);
+        rimLight.castShadow = true;
+        scene.add(rimLight);
+
+        // Fill light for even illumination
+        const fillLight = new THREE.DirectionalLight(0xffe6e6, 0.6);
+        fillLight.position.set(-4, 4, 6);
+        scene.add(fillLight);
+
+        // Accent light for vessels
+        const accentLight = new THREE.PointLight(0xff6666, 0.5, 20);
+        accentLight.position.set(0, 2, 0);
+        scene.add(accentLight);
+
+        // Back light for separation
+        const backLight = new THREE.DirectionalLight(0xccccff, 0.4);
+        backLight.position.set(0, 2, -10);
+        scene.add(backLight);
+
+        updateLoadingStatus('Creating ground plane...');
+        // Enhanced ground reflection
+      const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(30,30),
+          new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            metalness: 0.15,
+            roughness: 0.9,
+            transparent: true,
+            opacity: 0.2
+          })
+      );
+      plane.rotation.x = -Math.PI/2;
+        plane.position.y = -1.1;
+        plane.receiveShadow = true;
+      scene.add(plane);
+
+        updateLoadingStatus('Loading 3D heart model...');
+        console.log('Loading external 3D heart model...');
+        
+        // Try to load a 3D heart model from a URL
+        const loader = new GLTFLoader();
+        
+        // Try to load a real 3D heart model from online
+        updateLoadingStatus('Loading real 3D heart model...');
+        console.log('Loading real 3D heart model...');
+        
+        // Create heart group first
+        const heartGroup = new THREE.Group();
+        
+        // Organ selection and loading
+        const organData = {
+          heart: {
+            title: '❤️ Human Heart Anatomy',
+            description: '💓 Realistic heartbeat animation',
+            features: 'Heart chambers & vessels',
+            file: './heart.glb',
+            animation: 'heartbeat'
+          },
+          lung: {
+            title: '🫁 Human Lung Anatomy', 
+            description: '💨 Realistic breathing animation',
+            features: 'Left & right lungs',
+            file: './lung.glb',
+            animation: 'breathing'
+          },
+          liver: {
+            title: '🫀 Human Liver Anatomy',
+            description: '🔄 Realistic liver function',
+            features: 'Liver lobes & vessels', 
+            file: './liver.glb',
+            animation: 'pulsing'
+          }
+        };
+        
+        // Get current organ selection
+        const organSelect = document.getElementById('organ-select');
+        const currentOrgan = organSelect.value;
+        const organInfo = organData[currentOrgan];
+        
+        // Update UI
+        document.getElementById('organ-title').textContent = organInfo.title;
+        document.getElementById('organ-description').textContent = organInfo.description;
+        document.getElementById('organ-features').textContent = organInfo.features;
+        
+        // Load the initial organ
+        loadOrgan(currentOrgan);
+        
+        // Add organ selection change handler
+        organSelect.addEventListener('change', function() {
+          const selectedOrgan = this.value;
+          console.log(`Switching to ${selectedOrgan}...`);
+          
+          // Clear current scene
+          if (window.organGroup) {
+            scene.remove(window.organGroup);
+          }
+          
+          // Load new organ
+          loadOrgan(selectedOrgan);
+        });
+        
+        function loadOrgan(organType) {
+          const organInfo = organData[organType];
+          
+          // Update UI
+          document.getElementById('organ-title').textContent = organInfo.title;
+          document.getElementById('organ-description').textContent = organInfo.description;
+          document.getElementById('organ-features').textContent = organInfo.features;
+          
+          // Create new organ group
+          const newOrganGroup = new THREE.Group();
+          
+          // Load the selected organ model
+          const organModelUrl = organInfo.file;
+          console.log(`Loading ${organType} model from: ${organModelUrl}`);
+          
+          loader.load(
+            organModelUrl,
+            function (gltf) {
+              console.log(`✅ ${organType} model loaded successfully!`);
+              updateLoadingStatus(`${organInfo.title} loaded!`);
+              
+              const model = gltf.scene;
+              
+              // Scale and position the organ model appropriately
+              model.scale.set(0.5, 0.5, 0.5);
+              model.position.set(0, 0, 0);
+              
+              // Add the model to the organ group
+              newOrganGroup.add(model);
+              
+              // Position the entire organ group
+              newOrganGroup.position.set(0, 0, 0);
+              newOrganGroup.rotation.z = 0.05;
+              newOrganGroup.scale.set(1.5, 1.5, 1.5);
+              scene.add(newOrganGroup);
+              
+              // Store organ group for animation
+              window.organGroup = newOrganGroup;
+              window.currentOrgan = organType;
+              
+              console.log(`3D ${organType} model added to scene:`, newOrganGroup);
+              updateProgressText(`${organInfo.title} loaded successfully!`);
+              
+              // Hide loading screen
+              setTimeout(() => {
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                  loadingEl.style.opacity = '0';
+                  loadingEl.style.transition = 'opacity 0.8s ease-out';
+                  setTimeout(() => {
+                    loadingEl.style.display = 'none';
+                  }, 800);
+                }
+              }, 1000);
+            },
+            function (progress) {
+              console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+              updateProgressText(`Loading ${organType} model... ${Math.floor(progress.loaded / progress.total * 100)}%`);
+            },
+            function (error) {
+              console.log(`❌ Failed to load ${organType} model:`, error);
+              updateLoadingStatus(`Failed to load ${organType} model, creating programmatic ${organType}...`);
+              console.log(`Creating programmatic ${organType} as fallback...`);
+              createProgrammaticOrgan(organType);
+            }
+          );
+        }
+        
+        function createProgrammaticOrgan(organType) {
+          if (organType === 'heart') {
+            createProgrammaticHeart();
+          } else if (organType === 'lung') {
+            createProgrammaticLung();
+          } else if (organType === 'liver') {
+            createProgrammaticLiver();
+          }
+        }
+        
+        function createProgrammaticLung() {
+          const lungGroup = new THREE.Group();
+          const lungMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xf5a9a9,
+            roughness: 0.9,
+            metalness: 0.0,
+            clearcoat: 0.2,
+            clearcoatRoughness: 0.6,
+            transmission: 0.1,
+            thickness: 0.3,
+            ior: 1.4
+          });
+          
+          // Left lung
+          const leftLung = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), lungMaterial);
+          leftLung.scale.set(0.6, 1.8, 0.8);
+          leftLung.position.set(-0.8, 0, 0);
+          leftLung.rotation.z = -0.3;
+          lungGroup.add(leftLung);
+          
+          // Right lung
+          const rightLung = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 12), lungMaterial);
+          rightLung.scale.set(0.8, 2.0, 1.0);
+          rightLung.position.set(0.8, 0, 0);
+          rightLung.rotation.z = 0.3;
+          lungGroup.add(rightLung);
+          
+          lungGroup.scale.set(1.5, 1.5, 1.5);
+          scene.add(lungGroup);
+          window.organGroup = lungGroup;
+          window.currentOrgan = 'lung';
+        }
+        
+        function createProgrammaticLiver() {
+          const liverGroup = new THREE.Group();
+          const liverMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x8B4513,
+            roughness: 0.8,
+            metalness: 0.0,
+            clearcoat: 0.3,
+            clearcoatRoughness: 0.5,
+            transmission: 0.05,
+            thickness: 0.2,
+            ior: 1.4
+          });
+          
+          // Main liver body
+          const liver = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 24), liverMaterial);
+          liver.scale.set(1.2, 0.8, 0.6);
+          liver.position.set(0, 0, 0);
+          liverGroup.add(liver);
+          
+          liverGroup.scale.set(1.5, 1.5, 1.5);
+          scene.add(liverGroup);
+          window.organGroup = liverGroup;
+          window.currentOrgan = 'liver';
+        }
+        
+        function createProgrammaticHeart() {
+        // Create the human heart with proper heart shape
+        const heartGroup = new THREE.Group();
+        
+        // Realistic heart tissue material - red-pink
+        const heartMaterial = new THREE.MeshPhysicalMaterial({
+          color: 0xff6b6b, // Red-pink like real heart tissue
+          roughness: 0.8,
+          metalness: 0.0,
+          clearcoat: 0.3,
+          clearcoatRoughness: 0.5,
+          transmission: 0.05,
+          thickness: 0.2,
+          ior: 1.4,
+          sheen: 0.4,
+          sheenRoughness: 0.6,
+          sheenColor: 0xff9999
+        });
+        
+        // Create a simple, recognizable heart shape
+        const heartBody = new THREE.Group();
+        
+        // Create a heart shape using a custom curve
+        const heartShape = new THREE.Shape();
+        
+        // Heart curve points
+        heartShape.moveTo(0, 0.5);
+        heartShape.bezierCurveTo(0.5, 0.5, 0.5, 0, 0, 0);
+        heartShape.bezierCurveTo(-0.5, 0, -0.5, 0.5, 0, 0.5);
+        
+        // Create heart geometry using lathe
+        const heartGeometry = new THREE.LatheGeometry(heartShape.getPoints(20), 32);
+        
+        // Add some organic variation to the heart
+        const heartVertices = heartGeometry.attributes.position.array;
+        for (let i = 0; i < heartVertices.length; i += 3) {
+          const x = heartVertices[i];
+          const y = heartVertices[i + 1];
+          const z = heartVertices[i + 2];
+          
+          // Add organic variation
+          const noise = Math.sin(x * 8) * Math.cos(y * 6) * 0.02 + 
+                       Math.sin(x * 16) * Math.cos(z * 12) * 0.01;
+          heartVertices[i] += noise;
+          heartVertices[i + 1] += noise * 0.5;
+          heartVertices[i + 2] += noise * 0.3;
+        }
+        heartGeometry.attributes.position.needsUpdate = true;
+        
+        const heart = new THREE.Mesh(heartGeometry, heartMaterial);
+        heart.scale.set(1.5, 1.8, 1.0);
+        heart.position.set(0, 0, 0);
+        heart.castShadow = true;
+        heartBody.add(heart);
+        
+        // Add heart chambers as separate spheres for detail
+        const leftAtrium = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 12, 8),
+          heartMaterial
+        );
+        leftAtrium.position.set(-0.2, 0.3, 0);
+        leftAtrium.scale.set(0.8, 0.6, 0.7);
+        leftAtrium.castShadow = true;
+        heartBody.add(leftAtrium);
+        
+        const rightAtrium = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 12, 8),
+          heartMaterial
+        );
+        rightAtrium.position.set(0.2, 0.3, 0);
+        rightAtrium.scale.set(0.8, 0.6, 0.7);
+        rightAtrium.castShadow = true;
+        heartBody.add(rightAtrium);
+        
+        // TRACHEA (windpipe) - vertical tube
+        const trachea = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.1, 0.12, 2.8, 12),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xe67e7e,
+            roughness: 0.7,
+            metalness: 0.0,
+            clearcoat: 0.4,
+            clearcoatRoughness: 0.4,
+            transmission: 0.05,
+            thickness: 0.2,
+            ior: 1.4
+          })
+        );
+        trachea.position.set(0, 2.2, 0);
+        trachea.rotation.z = Math.PI / 2;
+        trachea.castShadow = true;
+        heartGroup.add(trachea);
+        
+        // LEFT MAIN BRONCHUS - connects to left lung
+        const leftBronchus = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.08, 1.2, 8),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xe67e7e,
+            roughness: 0.7,
+            metalness: 0.0,
+            clearcoat: 0.4,
+            clearcoatRoughness: 0.4,
+            transmission: 0.05,
+            thickness: 0.2,
+            ior: 1.4
+          })
+        );
+        leftBronchus.position.set(-0.4, 1.4, 0);
+        leftBronchus.rotation.z = -Math.PI / 3;
+        leftBronchus.rotation.x = 0.1;
+        heartGroup.add(leftBronchus);
+        
+        // RIGHT MAIN BRONCHUS - connects to right lung
+        const rightBronchus = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.1, 1.0, 8),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xe67e7e,
+            roughness: 0.7,
+            metalness: 0.0,
+            clearcoat: 0.4,
+            clearcoatRoughness: 0.4,
+            transmission: 0.05,
+            thickness: 0.2,
+            ior: 1.4
+          })
+        );
+        rightBronchus.position.set(0.4, 1.4, 0);
+        rightBronchus.rotation.z = Math.PI / 3;
+        rightBronchus.rotation.x = 0.1;
+        heartGroup.add(rightBronchus);
+        
+        // PULMONARY ARTERIES (red) - carry blood to lungs
+        const pulmonaryArteryMaterial = new THREE.MeshPhysicalMaterial({
+          color: 0xff4444,
+          roughness: 0.3,
+          metalness: 0.0,
+          clearcoat: 0.6,
+          clearcoatRoughness: 0.2,
+          transmission: 0.1,
+          thickness: 0.1,
+          ior: 1.5
+        });
+        
+        // LEFT PULMONARY ARTERY
+        const leftPulmonaryArtery = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.08, 1.4, 8),
+          pulmonaryArteryMaterial
+        );
+        leftPulmonaryArtery.position.set(-0.5, 1.0, 0.2);
+        leftPulmonaryArtery.rotation.z = -Math.PI / 4;
+        leftPulmonaryArtery.rotation.x = 0.2;
+        heartGroup.add(leftPulmonaryArtery);
+        
+        // RIGHT PULMONARY ARTERY
+        const rightPulmonaryArtery = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.1, 1.2, 8),
+          pulmonaryArteryMaterial
+        );
+        rightPulmonaryArtery.position.set(0.5, 1.0, 0.2);
+        rightPulmonaryArtery.rotation.z = Math.PI / 4;
+        rightPulmonaryArtery.rotation.x = 0.2;
+        heartGroup.add(rightPulmonaryArtery);
+        
+        // PULMONARY VEINS (blue) - carry blood from lungs
+        const pulmonaryVeinMaterial = new THREE.MeshPhysicalMaterial({
+          color: 0x0066ff,
+          roughness: 0.4,
+        metalness: 0.0,
+          clearcoat: 0.5,
+          clearcoatRoughness: 0.3,
+          transmission: 0.1,
+          thickness: 0.15,
+          ior: 1.4
+        });
+        
+        // Pulmonary veins (4 total) - smaller, blue
+        const pulmonaryVeinData = [
+          { pos: [-0.6, 0.8, -0.1], rot: [0, 0, -Math.PI/6] },
+          { pos: [-0.4, 1.0, -0.3], rot: [0, 0, -Math.PI/4] },
+          { pos: [0.5, 0.9, -0.2], rot: [0, 0, Math.PI/6] },
+          { pos: [0.7, 0.7, -0.4], rot: [0, 0, Math.PI/4] }
+        ];
+        
+        pulmonaryVeinData.forEach(({ pos, rot }) => {
+          const pulmonaryVein = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.06, 0.9, 6),
+            pulmonaryVeinMaterial
+          );
+          pulmonaryVein.position.set(...pos);
+          pulmonaryVein.rotation.set(...rot);
+          heartGroup.add(pulmonaryVein);
+        });
+        
+        heartGroup.add(heartBody);
+        
+        // Position the entire heart
+        heartGroup.position.set(0, 0, 0);
+        heartGroup.rotation.z = 0.05; // Slight tilt
+        heartGroup.scale.set(2.0, 2.0, 2.0);
+        scene.add(heartGroup);
+        
+        console.log('3D Heart created and added to scene:', heartGroup);
+        updateProgressText('Heart anatomy created...');
+        
+        // Store organ group for animation
+        window.organGroup = heartGroup;
+        window.currentOrgan = currentOrgan;
+        
+        // Hide loading screen
+        setTimeout(() => {
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) {
+            loadingEl.style.opacity = '0';
+            loadingEl.style.transition = 'opacity 0.8s ease-out';
+            setTimeout(() => {
+              loadingEl.style.display = 'none';
+            }, 800);
+          }
+        }, 1000);
+        }
+
+        updateLoadingStatus('Adding lung labels...');
+        // Create lung labels
+        createLungLabels();
+
+      // Clock for animation
+      clock = new THREE.Clock();
+
+      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('dblclick', () => { controls.reset(); });
+      }
+
+      function createLungLabels() {
+        const labelData = [
+          { text: "Left Lung", position: [-1.2, 0, 0], color: 0xff6b6b },
+          { text: "Right Lung", position: [1.2, 0, 0], color: 0xff8e8e },
+          { text: "Trachea", position: [0, 2.5, 0], color: 0x4ecdc4 },
+          { text: "Left Bronchus", position: [-0.6, 1.5, 0], color: 0x45b7d1 },
+          { text: "Right Bronchus", position: [0.6, 1.5, 0], color: 0x45b7d1 },
+          { text: "Left Pulmonary Artery", position: [-0.8, 1.2, 0.5], color: 0xff4444 },
+          { text: "Right Pulmonary Artery", position: [0.8, 1.2, 0.5], color: 0xff4444 },
+          { text: "Pulmonary Veins", position: [0, 1.0, -0.8], color: 0x0066ff }
+        ];
+
+        labelData.forEach(({ text, position, color }) => {
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.width = 512;
+          canvas.height = 128;
+          
+          // Create gradient background
+          const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
+          gradient.addColorStop(0, `rgba(${(color >> 16) & 255}, ${(color >> 8) & 255}, ${color & 255}, 0.8)`);
+          gradient.addColorStop(1, `rgba(${(color >> 16) & 255}, ${(color >> 8) & 255}, ${color & 255}, 0.4)`);
+          
+          context.fillStyle = gradient;
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          
+          context.fillStyle = '#ffffff';
+          context.font = 'bold 20px Arial';
+          context.textAlign = 'center';
+          context.textBaseline = 'middle';
+          context.fillText(text, canvas.width/2, canvas.height/2);
+          
+          const texture = new THREE.CanvasTexture(canvas);
+          const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+          const sprite = new THREE.Sprite(material);
+          sprite.position.set(...position);
+          sprite.scale.set(0.4, 0.15, 1);
+          sprite.visible = showLabels;
+          
+          liverLabels.push(sprite);
+          scene.add(sprite);
+        });
+      }
+
+      // Realistic organ animation
+      function updateOrganAnimation(t){
+        if (window.organGroup) {
+          const organ = window.currentOrgan || 'heart';
+          
+          if (organ === 'heart') {
+            // Heartbeat rhythm (60-100 beats per minute = 1-1.67 Hz)
+            const heartbeat = 1 + 0.05 * Math.sin(t * 1.2);
+            window.organGroup.scale.setScalar(1.5 * heartbeat);
+            window.organGroup.rotation.y = 0.01 * Math.sin(t * 1.5);
+            window.organGroup.rotation.x = 0.005 * Math.cos(t * 1.3);
+            updateProgressText(`Heartbeat... ${Math.floor(t)}s`);
+          } else if (organ === 'lung') {
+            // Breathing rhythm (12-20 breaths per minute = 0.2-0.33 Hz)
+            const breathing = 1 + 0.1 * Math.sin(t * 0.25);
+            window.organGroup.scale.setScalar(1.5 * breathing);
+            window.organGroup.rotation.y = 0.02 * Math.sin(t * 0.3);
+            window.organGroup.rotation.x = 0.01 * Math.cos(t * 0.2);
+            updateProgressText(`Breathing... ${Math.floor(t)}s`);
+          } else if (organ === 'liver') {
+            // Liver pulsing (slower, more subtle)
+            const pulsing = 1 + 0.03 * Math.sin(t * 0.8);
+            window.organGroup.scale.setScalar(1.5 * pulsing);
+            window.organGroup.rotation.y = 0.005 * Math.sin(t * 0.5);
+            window.organGroup.rotation.x = 0.003 * Math.cos(t * 0.4);
+            updateProgressText(`Liver function... ${Math.floor(t)}s`);
+          }
+        }
+      }
+
+      // Enhanced realistic liver colors with anatomical variation
+    function animateColor(t){
+        const baseHue = 0.0; // Red base
+        const hueVariation = 0.1; // Increased variation for more realism
+
+        // Main liver color - rich, deep red-brown
+      const main = new THREE.Color();
+        const mainHue = baseHue + hueVariation * Math.sin(t*0.3);
+        const mainSat = 0.9 + 0.1 * Math.sin(t*0.4);
+        const mainLight = 0.4 + 0.1 * Math.cos(t*0.6);
+        main.setHSL(mainHue, mainSat, mainLight);
+        
+        // Only set color if material exists and has color property
+        if (mc.material && mc.material.color) {
+      mc.material.color.copy(main);
+        }
+
+        // Enhanced glow layer
+      const glowColor = new THREE.Color();
+        const glowHue = baseHue + 0.04 + hueVariation * Math.cos(t*0.25);
+        const glowSat = 0.95 + 0.05 * Math.sin(t*0.7);
+        const glowLight = 0.5 + 0.12 * Math.cos(t*0.4);
+        glowColor.setHSL(glowHue, glowSat, glowLight);
+        
+        if (glowMesh && glowMesh.material && glowMesh.material.color) {
+          glowMesh.material.color.copy(glowColor);
+        }
+    }
+
+    function onWindowResize(){
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+        if (isAnimating) {
+          updateOrganAnimation(t);
+        }
+
+        // Update labels to face camera
+        liverLabels.forEach(label => {
+          if (label && label.lookAt) {
+            label.lookAt(camera.position);
+          }
+        });
+
+        // Auto-rotate if enabled
+        if (autoRotate) {
+          controls.autoRotate = true;
+        } else {
+          controls.autoRotate = false;
+        }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+      // Enhanced control functions - make them global
+      window.toggleAnimation = function() {
+        isAnimating = !isAnimating;
+        const btn = document.querySelector('.control-btn');
+        btn.textContent = isAnimating ? '⏸️ Pause' : '▶️ Play';
+      };
+
+      window.resetView = function() {
+        controls.reset();
+        camera.position.set(0, 1.2, 3.2);
+      };
+
+      window.toggleWireframe = function() {
+        isWireframe = !isWireframe;
+        mc.material.wireframe = isWireframe;
+        const btn = document.querySelectorAll('.control-btn')[2];
+        btn.textContent = isWireframe ? '🔲 Solid' : '🔲 Wireframe';
+      };
+
+      window.toggleLabels = function() {
+        showLabels = !showLabels;
+        liverLabels.forEach(label => label.visible = showLabels);
+        const btn = document.querySelectorAll('.control-btn')[3];
+        btn.textContent = showLabels ? '🏷️ Hide Labels' : '🏷️ Labels';
+      };
+
+      window.toggleAutoRotate = function() {
+        autoRotate = !autoRotate;
+        const btn = document.querySelectorAll('.control-btn')[4];
+        btn.textContent = autoRotate ? '🔄 Stop Rotate' : '🔄 Auto Rotate';
+      };
+    }
+  </script>
+  
+  <!-- Footer -->
+  <div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; font-size: 12px; color: #ccc; z-index: 100;">
+    🫀 3D Human Anatomy Explorer • Interactive Organ Models • Made with Three.js
+  </div>
+</body>
+</html>
