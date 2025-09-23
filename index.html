@@ -359,6 +359,7 @@
             organModelUrl,
             function (gltf) {
               console.log(`✅ ${organType} model loaded successfully!`);
+              console.log('GLTF object:', gltf);
               updateLoadingStatus(`${organInfo.title} loaded!`);
               
               const model = gltf.scene;
@@ -401,6 +402,23 @@
             },
             function (error) {
               console.log(`❌ Failed to load ${organType} model:`, error);
+              console.log('Error details:', error);
+              console.log('Model URL:', organModelUrl);
+              
+              // Try to fetch the URL directly to see what we get
+              fetch(organModelUrl)
+                .then(response => {
+                  console.log('Fetch response status:', response.status);
+                  console.log('Fetch response headers:', response.headers);
+                  return response.text();
+                })
+                .then(text => {
+                  console.log('Fetch response text (first 200 chars):', text.substring(0, 200));
+                })
+                .catch(fetchError => {
+                  console.log('Fetch error:', fetchError);
+                });
+              
               updateLoadingStatus(`Failed to load ${organType} model, creating programmatic ${organType}...`);
               console.log(`Creating programmatic ${organType} as fallback...`);
               createProgrammaticOrgan(organType);

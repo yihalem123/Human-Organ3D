@@ -3,14 +3,42 @@
   "name": "3d-human-anatomy-explorer",
   "builds": [
     {
-      "src": "**/*",
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "heart.glb",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "lung.glb",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "liver.glb",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "kidney.glb",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/(.*\\.glb)$",
-      "dest": "/$1"
+      "src": "/heart.glb",
+      "dest": "/heart.glb"
+    },
+    {
+      "src": "/lung.glb",
+      "dest": "/lung.glb"
+    },
+    {
+      "src": "/liver.glb",
+      "dest": "/liver.glb"
+    },
+    {
+      "src": "/kidney.glb",
+      "dest": "/kidney.glb"
     },
     {
       "src": "/(.*)",
@@ -19,32 +47,38 @@
   ],
   "headers": [
     {
-      "source": "/(.*\\.glb)$",
+      "source": "/heart.glb",
       "headers": [
         {
           "key": "Content-Type",
           "value": "model/gltf-binary"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
         }
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/lung.glb",
       "headers": [
         {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
+          "key": "Content-Type",
+          "value": "model/gltf-binary"
+        }
+      ]
+    },
+    {
+      "source": "/liver.glb",
+      "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
+          "key": "Content-Type",
+          "value": "model/gltf-binary"
+        }
+      ]
+    },
+    {
+      "source": "/kidney.glb",
+      "headers": [
         {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
+          "key": "Content-Type",
+          "value": "model/gltf-binary"
         }
       ]
     }

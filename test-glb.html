@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GLB File Test</title>
+</head>
+<body>
+    <h1>GLB File Test</h1>
+    <p>Testing if GLB files are accessible:</p>
+    
+    <div id="results"></div>
+    
+    <script>
+        const glbFiles = ['heart.glb', 'lung.glb', 'liver.glb', 'kidney.glb'];
+        const results = document.getElementById('results');
+        
+        async function testGLBFile(filename) {
+            try {
+                const response = await fetch(filename);
+                console.log(`Testing ${filename}:`, response.status, response.headers.get('content-type'));
+                
+                const text = await response.text();
+                const isHTML = text.includes('<!doctype') || text.includes('<html');
+                
+                results.innerHTML += `
+                    <div style="margin: 10px 0; padding: 10px; border: 1px solid ${isHTML ? 'red' : 'green'};">
+                        <strong>${filename}</strong><br>
+                        Status: ${response.status}<br>
+                        Content-Type: ${response.headers.get('content-type')}<br>
+                        Is HTML: ${isHTML}<br>
+                        First 100 chars: ${text.substring(0, 100)}
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML += `
+                    <div style="margin: 10px 0; padding: 10px; border: 1px solid red;">
+                        <strong>${filename}</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Test all GLB files
+        glbFiles.forEach(testGLBFile);
+    </script>
+</body>
+</html>
