@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net blob:;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://sketchfab.com blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://sketchfab.com blob:; frame-src 'self' https://sketchfab.com;" />
   <title>3D Human Anatomy Explorer — Interactive Organ Models</title>
   <style>
     html,body{height:100%;margin:0;background:linear-gradient(135deg,#0a0f1a 0%,#1a1f2e 50%,#0f1419 100%);color:#fff;font-family:Inter,system-ui,Helvetica,Arial;overflow-x:hidden}
@@ -44,6 +44,7 @@
         <option value="heart">❤️ Heart</option>
         <option value="lung">🫁 Lung</option>
         <option value="liver">🫀 Liver</option>
+        <option value="kidney">🫘 Kidney</option>
       </select>
     </div>
   </div>
@@ -298,6 +299,13 @@
             features: 'Liver lobes & vessels', 
             file: './liver.glb',
             animation: 'pulsing'
+          },
+          kidney: {
+            title: '🫘 Human Kidney Anatomy',
+            description: '💧 Realistic kidney function',
+            features: 'Kidney structure & vessels',
+            file: './kidney.glb',
+            animation: 'filtering'
           }
         };
         
@@ -324,6 +332,8 @@
             scene.remove(window.organGroup);
           }
           
+          // All organs now use Three.js - no special container handling needed
+          
           // Load new organ
           loadOrgan(selectedOrgan);
         });
@@ -335,6 +345,8 @@
           document.getElementById('organ-title').textContent = organInfo.title;
           document.getElementById('organ-description').textContent = organInfo.description;
           document.getElementById('organ-features').textContent = organInfo.features;
+          
+          // All organs now use GLB files - no special handling needed
           
           // Create new organ group
           const newOrganGroup = new THREE.Group();
@@ -396,6 +408,7 @@
           );
         }
         
+        
         function createProgrammaticOrgan(organType) {
           if (organType === 'heart') {
             createProgrammaticHeart();
@@ -403,6 +416,8 @@
             createProgrammaticLung();
           } else if (organType === 'liver') {
             createProgrammaticLiver();
+          } else if (organType === 'kidney') {
+            createProgrammaticKidney();
           }
         }
         
@@ -462,6 +477,68 @@
           scene.add(liverGroup);
           window.organGroup = liverGroup;
           window.currentOrgan = 'liver';
+        }
+        
+        function createProgrammaticKidney() {
+          const kidneyGroup = new THREE.Group();
+          const kidneyMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x8B4513,
+            roughness: 0.7,
+            metalness: 0.0,
+            clearcoat: 0.4,
+            clearcoatRoughness: 0.4,
+            transmission: 0.08,
+            thickness: 0.3,
+            ior: 1.4
+          });
+          
+          // Main kidney body - bean-shaped
+          const kidney = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 24), kidneyMaterial);
+          kidney.scale.set(1.0, 0.6, 0.4);
+          kidney.position.set(0, 0, 0);
+          kidney.rotation.z = 0.2;
+          kidneyGroup.add(kidney);
+          
+          // Renal pelvis (inner structure)
+          const pelvis = new THREE.Mesh(
+            new THREE.SphereGeometry(0.3, 16, 12),
+            new THREE.MeshPhysicalMaterial({
+              color: 0x654321,
+              roughness: 0.6,
+              metalness: 0.0,
+              clearcoat: 0.3,
+              clearcoatRoughness: 0.5,
+              transmission: 0.1,
+              thickness: 0.2,
+              ior: 1.4
+            })
+          );
+          pelvis.position.set(0, 0, 0.1);
+          pelvis.scale.set(0.8, 0.6, 0.3);
+          kidneyGroup.add(pelvis);
+          
+          // Ureter (tube connecting to bladder)
+          const ureter = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.05, 0.08, 1.5, 8),
+            new THREE.MeshPhysicalMaterial({
+              color: 0x654321,
+              roughness: 0.6,
+              metalness: 0.0,
+              clearcoat: 0.3,
+              clearcoatRoughness: 0.5,
+              transmission: 0.1,
+              thickness: 0.2,
+              ior: 1.4
+            })
+          );
+          ureter.position.set(0, -0.8, 0);
+          ureter.rotation.z = Math.PI / 6;
+          kidneyGroup.add(ureter);
+          
+          kidneyGroup.scale.set(1.5, 1.5, 1.5);
+          scene.add(kidneyGroup);
+          window.organGroup = kidneyGroup;
+          window.currentOrgan = 'kidney';
         }
         
         function createProgrammaticHeart() {
@@ -766,6 +843,13 @@
             window.organGroup.rotation.y = 0.005 * Math.sin(t * 0.5);
             window.organGroup.rotation.x = 0.003 * Math.cos(t * 0.4);
             updateProgressText(`Liver function... ${Math.floor(t)}s`);
+          } else if (organ === 'kidney') {
+            // Kidney filtering animation (subtle, rhythmic)
+            const filtering = 1 + 0.02 * Math.sin(t * 1.0);
+            window.organGroup.scale.setScalar(1.5 * filtering);
+            window.organGroup.rotation.y = 0.008 * Math.sin(t * 0.6);
+            window.organGroup.rotation.x = 0.004 * Math.cos(t * 0.7);
+            updateProgressText(`Kidney filtering... ${Math.floor(t)}s`);
           }
         }
       }
@@ -867,7 +951,7 @@
   
   <!-- Footer -->
   <div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; font-size: 12px; color: #ccc; z-index: 100;">
-    🫀 3D Human Anatomy Explorer • Interactive Organ Models • Made with Three.js
+    🫀 3D Human Anatomy Explorer • Heart • Lung • Liver • Kidney • Made with Three.js
   </div>
 </body>
 </html>

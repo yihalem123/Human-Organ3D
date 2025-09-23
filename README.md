@@ -8,11 +8,12 @@ An interactive 3D web application for exploring human organs with realistic mode
 - **❤️ Heart** - Realistic heartbeat animation with chambers and vessels
 - **🫁 Lungs** - Breathing animation with left and right lung lobes  
 - **🫀 Liver** - Subtle pulsing animation with liver tissue
+- **🫘 Kidney** - Realistic kidney filtering animation with vessels
 
 ### 🎮 **Controls**
 - **Mouse/Touch** - Drag to rotate, scroll to zoom
 - **Double-click** - Reset camera view
-- **Organ Selector** - Switch between heart, lung, and liver
+- **Organ Selector** - Switch between heart, lung, liver, and kidney
 - **Animation Controls** - Pause, wireframe, labels, auto-rotate
 
 ### ✨ **Technical Features**
@@ -24,7 +25,18 @@ An interactive 3D web application for exploring human organs with realistic mode
 
 ## 🚀 Quick Start
 
-### **Option 1: Local Server (Recommended)**
+### **Option 1: Deploy to Vercel (Recommended)**
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy to Vercel
+vercel
+
+# Follow the prompts and your app will be live!
+```
+
+### **Option 2: Local Server (Development)**
 ```bash
 # Navigate to project directory
 cd your-project-folder
@@ -36,12 +48,12 @@ python -m http.server 8000
 http://localhost:8000
 ```
 
-### **Option 2: Live Server (VS Code)**
+### **Option 3: Live Server (VS Code)**
 1. Install "Live Server" extension in VS Code
 2. Right-click on `index.html`
 3. Select "Open with Live Server"
 
-### **Option 3: Node.js Server**
+### **Option 4: Node.js Server**
 ```bash
 # Install http-server globally
 npm install -g http-server
@@ -61,6 +73,10 @@ http://localhost:8000
 ├── heart.glb           # Heart 3D model
 ├── lung.glb            # Lung 3D model  
 ├── liver.glb           # Liver 3D model
+├── kidney.glb          # Kidney 3D model
+├── package.json        # Node.js configuration
+├── vercel.json         # Vercel deployment config
+├── .vercelignore       # Vercel ignore file
 └── README.md           # This file
 ```
 
@@ -99,6 +115,11 @@ http://localhost:8000
 - **Animation**: Subtle pulsing (liver function)
 - **Features**: Liver lobes, hepatic vessels, bile ducts
 - **Materials**: Brown liver tissue with realistic surface
+
+### **🫘 Kidney**
+- **Animation**: Kidney filtering rhythm (subtle, rhythmic)
+- **Features**: Kidney structure, renal pelvis, ureter
+- **Materials**: Brown kidney tissue with realistic surface
 
 ## 🛠️ Technical Requirements
 
@@ -144,6 +165,41 @@ http://localhost:8000
 - Edit `updateOrganAnimation()` function
 - Adjust frequency, amplitude, and movement patterns
 - Add new animation types for different organs
+
+## 🚀 Vercel Deployment
+
+### **Deploy to Vercel (One-Click)**
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/3d-human-anatomy-explorer)
+
+### **Manual Deployment**
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy from your project directory
+vercel
+
+# For production deployment
+vercel --prod
+```
+
+### **Environment Variables**
+No environment variables required - this is a static site!
+
+### **Custom Domain**
+1. Go to your Vercel dashboard
+2. Select your project
+3. Go to Settings → Domains
+4. Add your custom domain
+
+### **Performance Features**
+- ✅ **Automatic HTTPS** - SSL certificates included
+- ✅ **Global CDN** - Fast loading worldwide
+- ✅ **Edge Functions** - Optimized delivery
+- ✅ **Automatic Deployments** - Deploy on every git push
 
 ## 📄 License
 

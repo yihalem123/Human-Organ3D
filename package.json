@@ -1,0 +1,38 @@
+{
+  "name": "3d-human-anatomy-explorer",
+  "version": "1.0.0",
+  "description": "Interactive 3D Human Anatomy Explorer - Realistic heart, lung, liver, and intestine models with organ-specific animations. Built with Three.js for medical education and anatomy learning.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "start": "python -m http.server 8000",
+    "build": "echo 'No build step required for static site'",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "3d",
+    "anatomy",
+    "medical",
+    "education",
+    "threejs",
+    "webgl",
+    "interactive",
+    "heart",
+    "lung",
+    "liver",
+    "intestine",
+    "sketchfab"
+  ],
+  "author": "3D Human Anatomy Explorer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/3d-human-anatomy-explorer.git"
+  },
+  "homepage": "https://3d-human-anatomy-explorer.vercel.app",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
