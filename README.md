@@ -9,11 +9,13 @@ An interactive 3D web application for exploring human organs with realistic mode
 - **🫁 Lungs** - Breathing animation with left and right lung lobes  
 - **🫀 Liver** - Subtle pulsing animation with liver tissue
 - **🫘 Kidney** - Realistic kidney filtering animation with vessels
+- **🫃 Stomach** - Realistic digestive churning animation with gastric system
+- **🏥 Medical** - Comprehensive medical visualization with scanning animation
 
 ### 🎮 **Controls**
 - **Mouse/Touch** - Drag to rotate, scroll to zoom
 - **Double-click** - Reset camera view
-- **Organ Selector** - Switch between heart, lung, liver, and kidney
+- **Organ Selector** - Switch between heart, lung, liver, kidney, stomach, and medical model
 - **Animation Controls** - Pause, wireframe, labels, auto-rotate
 
 ### ✨ **Technical Features**
@@ -69,15 +71,18 @@ http://localhost:8000
 
 ```
 3d-anatomy-explorer/
-├── index.html          # Main application
-├── heart.glb           # Heart 3D model
-├── lung.glb            # Lung 3D model  
-├── liver.glb           # Liver 3D model
-├── kidney.glb          # Kidney 3D model
-├── package.json        # Node.js configuration
-├── vercel.json         # Vercel deployment config
-├── .vercelignore       # Vercel ignore file
-└── README.md           # This file
+├── index.html                    # Main application
+├── models/                       # 3D Model files
+│   ├── heart.glb                 # Heart 3D model
+│   ├── lung.glb                  # Lung 3D model  
+│   ├── liver.glb                 # Liver 3D model
+│   ├── kidney.glb                # Kidney 3D model
+│   ├── stomach.glb               # Stomach 3D model
+│   └── divide_within_-_medical.glb # Medical 3D model
+├── package.json                  # Node.js configuration
+├── vercel.json                   # Vercel deployment config
+├── .vercelignore                 # Vercel ignore file
+└── README.md                     # This file
 ```
 
 ## 🎮 How to Use
@@ -120,6 +125,16 @@ http://localhost:8000
 - **Animation**: Kidney filtering rhythm (subtle, rhythmic)
 - **Features**: Kidney structure, renal pelvis, ureter
 - **Materials**: Brown kidney tissue with realistic surface
+
+### **🫃 Stomach**
+- **Animation**: Digestive churning motion (realistic gastric movement)
+- **Features**: Stomach body, fundus, esophagus, duodenum, gastric folds
+- **Materials**: Beige stomach tissue with realistic gastric texture
+
+### **🏥 Medical Model**
+- **Animation**: Medical scanning visualization (high-tech scanning motion)
+- **Features**: Comprehensive anatomical system with medical cross and scanning rings
+- **Materials**: Blue medical material with high-tech appearance
 
 ## 🛠️ Technical Requirements
 

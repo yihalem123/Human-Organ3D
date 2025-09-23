@@ -3,42 +3,14 @@
   "name": "3d-human-anatomy-explorer",
   "builds": [
     {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "heart.glb",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "lung.glb",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "liver.glb",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "kidney.glb",
+      "src": "**/*",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/heart.glb",
-      "dest": "/heart.glb"
-    },
-    {
-      "src": "/lung.glb",
-      "dest": "/lung.glb"
-    },
-    {
-      "src": "/liver.glb",
-      "dest": "/liver.glb"
-    },
-    {
-      "src": "/kidney.glb",
-      "dest": "/kidney.glb"
+      "src": "/models/(.*)",
+      "dest": "/models/$1"
     },
     {
       "src": "/(.*)",
@@ -47,38 +19,36 @@
   ],
   "headers": [
     {
-      "source": "/heart.glb",
+      "source": "/models/(.*\\.glb)$",
       "headers": [
         {
           "key": "Content-Type",
           "value": "model/gltf-binary"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     },
     {
-      "source": "/lung.glb",
+      "source": "/(.*)",
       "headers": [
         {
-          "key": "Content-Type",
-          "value": "model/gltf-binary"
-        }
-      ]
-    },
-    {
-      "source": "/liver.glb",
-      "headers": [
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
         {
-          "key": "Content-Type",
-          "value": "model/gltf-binary"
-        }
-      ]
-    },
-    {
-      "source": "/kidney.glb",
-      "headers": [
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
         {
-          "key": "Content-Type",
-          "value": "model/gltf-binary"
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
         }
       ]
     }
